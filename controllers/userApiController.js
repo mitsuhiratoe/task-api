@@ -1,56 +1,62 @@
-const User = require('../models/user');
-const userApiService = require('../services/userApiService');
-const bcrypt = require('bcrypt');
+const User = require("../models/user");
+const userApiService = require("../services/userApiService");
+const bcrypt = require("bcrypt");
 
+// Fonction générique pour envoyer une réponse HTTP
+const sendResponse = (res, status, data = null, message = "") => {
+    return res.status(status).json({ status, data, message });
+};
+
+// Obtenir tous les utilisateurs
 module.exports.getUsers = async (req, res) => {
     try {
-        let users = await userApiService.getUsers({});
-        return res.status(200).json({status:200, data:users, message:"users success"})
-    } catch(e) {
-        return res.status(400).json({status:400, message:e.message})
+        const users = await userApiService.getUsers({});
+        sendResponse(res, 200, users, "Users retrieved successfully");
+    } catch (e) {
+        sendResponse(res, 400, null, e.message);
     }
-}
+};
 
+// Obtenir un utilisateur par ID
 module.exports.getUser = async (req, res) => {
     try {
-        let user = await userApiService.getUser({ _id:req.params.id });
-        return res.status(200).json({status:200, data:user, message:"one user success"})
-    } catch(e) {
-        return res.status(400).json({status:400, message:e.message})
+        const user = await userApiService.getUser({ _id: req.params.id });
+        if (!user) return sendResponse(res, 404, null, "User not found");
+        sendResponse(res, 200, user, "User retrieved successfully");
+    } catch (e) {
+        sendResponse(res, 400, null, e.message);
     }
-}
+};
 
+// Créer un nouvel utilisateur
 module.exports.createUser = async (req, res) => {
     try {
-        console.log(req.body);
-
-        let salt = await bcrypt.genSalt(10);
-        req.body.password = await bcrypt.hash(req.body.password, salt);
-        
-        let user = User(req.body);
-        user = await userApiService.createUser(user);
-        return res.status(201).json({ status:201, data:user, message:"user success save" })
-    } catch(e) {
-        return res.status(400).json({ status:400, message: "controller : " + e.message })
+        req.body.password = await bcrypt.hash(req.body.password, 10);
+        const user = await userApiService.createUser(new User(req.body));
+        sendResponse(res, 201, user, "User created successfully");
+    } catch (e) {
+        sendResponse(res, 400, null, e.message);
     }
-}
+};
 
+// Mettre à jour un utilisateur
 module.exports.updateUser = async (req, res) => {
     try {
-        let salt = await bcrypt.genSalt(10);
-        req.body.password = bcrypt.hash(req.body.password, salt);
-
-        let user = User(req.body);
-        user = userApiService.updateUser(user);
-
-        return res.status(200).json({ status:201, data:user, message:"user success update" })
-    } catch(e) {
-        return res.status(400).json({ status:400, message:e.message })
+        const updatedUser = await userApiService.updateUser(req.params.id, req.body);
+        if (!updatedUser) return sendResponse(res, 404, null, "User not found");
+        sendResponse(res, 200, updatedUser, "User updated successfully");
+    } catch (e) {
+        sendResponse(res, 400, null, e.message);
     }
-}
+};
 
+// Supprimer un utilisateur
 module.exports.deleteUser = async (req, res) => {
     try {
-        
+        const deletedUser = await userApiService.deleteUser(req.params.id);
+        if (!deletedUser) return sendResponse(res, 404, null, "User not found");
+        sendResponse(res, 200, deletedUser, "User deleted successfully");
+    } catch (e) {
+        sendResponse(res, 500, null, e.message);
     }
-}
+};
